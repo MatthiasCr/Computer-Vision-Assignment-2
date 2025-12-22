@@ -55,7 +55,6 @@ class MultimodalDataset(Dataset):
           self.lidar_data.append(lidar_depth)
           self.labels.append(torch.tensor(self.label_map[label], dtype=torch.float32)[None])
 
-
     def __len__(self):
         return len(self.rgb_data)
 
