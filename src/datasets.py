@@ -15,16 +15,22 @@ def get_torch_xyza(lidar_depth, azimuth, zenith):
 
 
 class MultimodalDataset(Dataset):
-    def __init__(self, fo_dataset, split_tag, img_transform, label_map):
+    def __init__(self, fo_dataset, split_tag, img_transform):
         """
         Args:
-            fo_dataset: grouped FiftyOne dataset
+            fo_dataset: grouped FiftyOne dataset with labels "cube" and "sphere"
             split_tag: "train" or "val" (sample tag on RGB samples)
             transform: torchvision transform for RGB
         """
         self.rgb_data = []
         self.lidar_data = []
         self.labels = []
+
+        # mapping label strings to indices
+        self.label_map = {
+            "cube": 0,
+            "sphere": 1,
+        }
 
         self.azimuth_cubes = torch.tensor(fo_dataset.info["azimuth_cubes"], dtype=torch.float32).view(-1)
         self.zenith_cubes  = torch.tensor(fo_dataset.info["zenith_cubes"], dtype=torch.float32).view(-1)
@@ -47,7 +53,7 @@ class MultimodalDataset(Dataset):
 
           self.rgb_data.append(rgb)
           self.lidar_data.append(lidar_depth)
-          self.labels.append(torch.tensor(label_map[label], dtype=torch.float32)[None])
+          self.labels.append(torch.tensor(self.label_map[label], dtype=torch.float32)[None])
 
 
     def __len__(self):
@@ -58,7 +64,7 @@ class MultimodalDataset(Dataset):
         lidar_depth = self.lidar_data[idx]
         label = self.labels[idx]
 
-        if label == "cube":
+        if label == 0:
             az = self.azimuth_cubes
             ze = self.zenith_cubes
         else:
