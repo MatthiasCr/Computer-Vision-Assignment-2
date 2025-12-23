@@ -38,7 +38,7 @@ class LateFusionNet(nn.Module):
         self.fc1 = nn.Linear(2, 20)
         self.fc2 = nn.Linear(20, 1)
 
-    def get_embedding_size():
+    def get_embedding_size(self):
         # late fusion uses own embeddings for both modalities
         return ""
 
@@ -104,7 +104,7 @@ class IntermediateFusionNet(nn.Module):
                 x = torch.cat((x_rgb, x_xyz), 1)
             case "add":
                 x = torch.add(x_rgb, x_xyz)
-            case "hadamard":
+            case "had":
                 x = torch.mul(x_rgb, x_xyz)
 
         x = torch.flatten(x, 1)

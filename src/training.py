@@ -1,4 +1,5 @@
 from visualization import print_loss, lidar_to_img
+from utils import set_seeds
 import torch
 import wandb
 
@@ -20,10 +21,23 @@ def initWandbRun(fusion_type, embedding_size, epochs, batch_size, parameters, op
     },
 )
 
+def get_correct(output, y, device):
+    zero_tensor = torch.tensor([0]).to(device)
+    pred = torch.gt(output, zero_tensor)
+    correct = pred.eq(y.view_as(pred)).sum().item()
+    return correct
 
-def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dataloader, device, wandbRun, scheduler=None):
+
+def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dataloader, device, wandbRun, scheduler=None, output_name="best_model"):
+    set_seeds(51)
     train_losses = []
     valid_losses = []
+    valid_N = len(valid_dataloader.dataset)    
+
+    best_val_loss = float('inf')
+    best_model = None
+    model_save_path = f"../checkpoints/{output_name}.pt"
+
     for epoch in range(epochs):
         model.train()
         train_loss = 0
@@ -47,17 +61,36 @@ def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dat
         
         model.eval()
         valid_loss = 0
+        correct = 0
         for step, batch in enumerate(valid_dataloader):
             target = batch[2].to(device)
             inputs_rgb = batch[0].to(device)
             inputs_xyz = batch[1].to(device)
             outputs = model(inputs_rgb, inputs_xyz)
             valid_loss += loss_func(outputs, target).item()
+            correct += get_correct(outputs, target, device)
         valid_loss = valid_loss / (step + 1)
         valid_losses.append(valid_loss)
-        print_loss(epoch, valid_loss, outputs, target, is_train=False)
+        accuracy = correct/valid_N
+        print_loss(epoch, valid_loss, outputs, target, is_train=False, accuracy=accuracy)
 
-        wandbRun.log({'train_loss': train_loss, 'valid_loss': valid_loss, "learning_rate": scheduler.get_last_lr()[0]})
+        wandbRun.log(
+            {
+                'train_loss': train_loss, 
+                'valid_loss': valid_loss, 
+                'valid_accuray': accuracy,
+                'learning_rate': scheduler.get_last_lr()[0]
+            }
+        )
+
+        # checkpointing
+        if valid_loss < best_val_loss:
+            best_val_loss = valid_loss
+            best_model = model
+            # Save the best model
+            torch.save(best_model.state_dict(), model_save_path)
+            print('Found and saved better weights for the model')
+
     return train_losses, valid_losses
 
 

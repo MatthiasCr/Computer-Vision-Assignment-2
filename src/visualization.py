@@ -1,16 +1,17 @@
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
 
 def format_positions(positions):
     return ['{0: .3f}'.format(x) for x in positions]
 
 
-def print_loss(epoch, loss, outputs, target, is_train=True, is_debug=False):
+def print_loss(epoch, loss, outputs, target, is_train=True, accuracy=None):
     loss_type = "train loss:" if is_train else "valid loss:"
-    print("epoch", str(epoch), loss_type, str(loss))
-    if is_debug:
-        print("example pred:", format_positions(outputs[0].tolist()))
-        print("example real:", format_positions(target[0].tolist()))
+
+    if accuracy is not None:
+        print("epoch", str(epoch), loss_type, str(loss), "accuracy:", str(accuracy))
+    else: 
+        print("epoch", str(epoch), loss_type, str(loss))
 
 
 def plot_loss(epochs, lossesDict):
@@ -27,9 +28,7 @@ def plot_loss(epochs, lossesDict):
 
 
 def lidar_to_img(lidar_xyza, figsize=(4, 4)):
-    """
-    Projects lidary xyza data to 2D image
-    """
+    """projects lidar xyza data to 2D image"""
 
     # move to CPU
     xyza = lidar_xyza.detach().cpu()
@@ -54,7 +53,6 @@ def lidar_to_img(lidar_xyza, figsize=(4, 4)):
     ax.set_ylim(19, 31)
     ax.set_zlim(-6, 6)
     ax.view_init(elev=0., azim=270)
-
     ax.set_axis_off()
 
     # Render to image
