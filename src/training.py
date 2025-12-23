@@ -78,7 +78,7 @@ def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dat
             {
                 'train_loss': train_loss, 
                 'valid_loss': valid_loss, 
-                'valid_accuray': accuracy,
+                'valid_accuracy': accuracy,
                 'learning_rate': scheduler.get_last_lr()[0]
             }
         )
