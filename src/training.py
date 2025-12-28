@@ -101,22 +101,21 @@ def train_model(
         valid_losses.append(valid_loss)
         
         # logging
+        log_dict = {}
+
         if calc_accuracy:
             accuracy = correct / 384 # valid_N
             print_loss(epoch, valid_loss, is_train=False, accuracy=accuracy)
-            wandbRun.log({'valid_accuracy': accuracy})
+            log_dict['valid_accuracy'] = accuracy
         else:
             print_loss(epoch, valid_loss, is_train=False)
 
         if scheduler is not None:
-            wandbRun.log({'learning_rate': scheduler.get_last_lr()[0]})
+            log_dict['learning_rate'] = scheduler.get_last_lr()[0]
 
-        wandbRun.log(
-            {
-                'train_loss': train_loss, 
-                'valid_loss': valid_loss, 
-            }
-        )
+        log_dict['train_loss'] = train_loss
+        log_dict['valid_loss'] = valid_loss
+        wandbRun.log(log_dict)
 
         # checkpointing
         if valid_loss < best_val_loss:

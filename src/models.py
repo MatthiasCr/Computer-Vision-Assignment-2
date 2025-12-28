@@ -125,7 +125,7 @@ class LidarClassifier(nn.Module):
         super().__init__()
         kernel_size = 3
         n_classes = 1
-        self.embedding_size = 200
+        self.embedding_size = 200*4*4
         self.embedder = nn.Sequential(
             nn.Conv2d(4, 50, kernel_size, padding=1),
             nn.ReLU(),
@@ -140,10 +140,10 @@ class LidarClassifier(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Flatten(),
-            nn.Linear(200 * 4 * 4, self.embedding_size),
+            #nn.Linear(200 * 4 * 4, self.embedding_size),
         )
         self.classifier = nn.Sequential(
-            nn.Linear(200, 100),
+            nn.Linear(200 * 4 * 4, 100),
             nn.ReLU(),
             nn.Linear(100, n_classes)
         )
@@ -151,7 +151,8 @@ class LidarClassifier(nn.Module):
         return self.embedding_size
 
     def get_embs(self, lidar_xyz):
-        return F.normalize(self.embedder(lidar_xyz))
+        return self.embedder(lidar_xyz)
+        # return F.normalize(self.embedder(lidar_xyz))
     
     def forward(self, raw_data=None, data_embs=None):
         assert (raw_data is not None or data_embs is not None), "No Lidar or embeddings given."
@@ -208,23 +209,29 @@ class ContrastivePretraining(nn.Module):
         self.lidar_embedder = CILPEmbedder(4, self.embedding_size)
         self.cos = nn.CosineSimilarity()
 
+        self.logit_scale = nn.Parameter(torch.tensor(1 / 0.07))
+
     def get_embedding_size(self):
         return self.embedding_size
 
     def forward(self, rgb_imgs, lidar_xyz):
         img_emb = self.img_embedder(rgb_imgs)
         lidar_emb = self.lidar_embedder(lidar_xyz)
+        img_emb = F.normalize(img_emb, dim=1)
+        lidar_emb = F.normalize(lidar_emb, dim=1)
 
         repeated_img_emb = img_emb.repeat_interleave(len(img_emb), dim=0)
         repeated_lidar_emb = lidar_emb.repeat(len(lidar_emb), 1)
 
         similarity = self.cos(repeated_img_emb, repeated_lidar_emb)
         similarity = torch.unflatten(similarity, 0, (self.batch_size, self.batch_size))
-        similarity = (similarity + 1) / 2
+        
+        logits_per_img = self.logit_scale.exp() * similarity
 
         logits_per_img = similarity
         logits_per_lidar = similarity.T
         return logits_per_img, logits_per_lidar
+
 
 
 class Projector(nn.Module):
@@ -238,7 +245,8 @@ class Projector(nn.Module):
             nn.Linear(500, lidar_emb_size)
         )
     def forward(self, img_emb):
-        return F.normalize(self.layers(img_emb))
+        return self.layers(img_emb)
+        #return F.normalize(self.layers(img_emb))
 
 
 class RGB2LiDARClassifier(nn.Module):

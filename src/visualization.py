@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+import wandb
+import io
+
 
 def format_positions(positions):
     return ['{0: .3f}'.format(x) for x in positions]
@@ -62,3 +66,36 @@ def lidar_to_img(lidar_xyza, figsize=(4, 4)):
 
     plt.close(fig)
     return image
+
+
+def plot_similarity_matrix(model, apply_model, dataloader, device, run):
+    """
+    Conducts inference for num_batches of dataloader. 
+    Logs images of rgb and lidar together with the label, prediction, and prediction probability to the given wandb run
+    """
+    model.eval()
+    with torch.no_grad():
+        for i, batch in enumerate(dataloader):
+            if i >= 1:
+                break
+    
+            logits_per_img, logits_per_lidar = apply_model(model, batch) 
+            sim_matrix = logits_per_img.detach().cpu()    
+            
+            fig, ax = plt.subplots(figsize=(6, 5))
+            im = ax.imshow(sim_matrix, vmin=0, vmax=1)
+            plt.colorbar(im, ax=ax, label="Cosine similarity")
+            ax.set_xlabel("LiDAR samples")
+            ax.set_ylabel("Image samples")
+            ax.set_title("CILP Image–LiDAR Similarity Matrix")
+            plt.tight_layout()          
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    buf.seek(0)
+
+    run.log({
+        "similarity_matrix": wandb.Image(buf, caption="CILP Image–LiDAR Similarity Matrix")
+    })
+
+    plt.close(fig)
