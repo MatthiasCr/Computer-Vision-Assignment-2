@@ -1,16 +1,17 @@
-from visualization import print_loss, lidar_to_img
-from utils import set_seeds
 import torch
 import wandb
+import time
+import random
+from .visualization import print_loss, lidar_to_img
+from .utils import set_seeds
 
 
-def initWandbRun(fusion_type, embedding_size, epochs, batch_size, parameters, optimizer, lr_scheduler, lr_start, lr_end):
-    return wandb.init(
+def initWandbRun(fusion_type, epochs, batch_size, parameters, optimizer, lr_scheduler, lr_start, lr_end):
+    run = wandb.init(
     entity="matthiascr-hpi-team",
     project="cilp-extended-assessment",
     config={
         "fusion type": fusion_type,
-        "embedding_size": embedding_size,
         "epochs": epochs,
         "batch_size": batch_size,
         "parameters": parameters,
@@ -18,8 +19,13 @@ def initWandbRun(fusion_type, embedding_size, epochs, batch_size, parameters, op
         "lr scheduler": lr_scheduler,
         "lr_start": lr_start,
         "lr_end": lr_end
-    },
-)
+    })
+
+    # for valid loss and accuracy log the best values as summary
+    run.define_metric("valid_loss", summary="min")
+    run.define_metric("valid_accuracy", summary="max")
+    return run
+
 
 def get_correct(output, y, device):
     zero_tensor = torch.tensor([0]).to(device)
@@ -28,11 +34,38 @@ def get_correct(output, y, device):
     return correct
 
 
-def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dataloader, device, wandbRun, scheduler=None, output_name="best_model"):
-    set_seeds(51)
+def train_model(
+        model, 
+        optimizer, 
+        apply_model, 
+        loss_func, 
+        epochs, 
+        train_dataloader, 
+        valid_dataloader, 
+        device, 
+        wandbRun, 
+        scheduler=None, 
+        output_name="best_model",
+        calc_accuracy=True
+    ):
+    """
+    args:
+        apply_model: function that that applies the model on a batch and returns outputs and target
+        loss_func: function that calculates loss given model outputs and target.
+        wandbRun: wandb run to log metrics to
+        scheduler: learning rate scheduler. Can be None then constant learning rate defined in the optimizer is used
+        output_name: name under which the best models parameters are stored
+        calc_accuracy: wether accuracy should be calculated during validation. 
+            Set this to False when its not a classification task.
+    """
+    saved_random_state = set_seeds(51)
+
+    # start timer
+    train_start_time = time.perf_counter()
+    
     train_losses = []
     valid_losses = []
-    valid_N = len(valid_dataloader.dataset)    
+    valid_N = len(valid_dataloader.dataset)
 
     best_val_loss = float('inf')
     best_model = None
@@ -43,11 +76,7 @@ def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dat
         train_loss = 0
         for step, batch in enumerate(train_dataloader):
             optimizer.zero_grad()
-            target = batch[2].to(device)
-            inputs_rgb = batch[0].to(device)
-            inputs_xyz = batch[1].to(device)
-            outputs = model(inputs_rgb, inputs_xyz)
-            
+            outputs, target = apply_model(model, batch)
             loss = loss_func(outputs, target)
             loss.backward()
             optimizer.step()
@@ -57,29 +86,35 @@ def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dat
 
         train_loss = train_loss / (step + 1)
         train_losses.append(train_loss)
-        print_loss(epoch, train_loss, outputs, target, is_train=True)
+        print_loss(epoch, train_loss, is_train=True)
         
         model.eval()
         valid_loss = 0
         correct = 0
         for step, batch in enumerate(valid_dataloader):
-            target = batch[2].to(device)
-            inputs_rgb = batch[0].to(device)
-            inputs_xyz = batch[1].to(device)
-            outputs = model(inputs_rgb, inputs_xyz)
-            valid_loss += loss_func(outputs, target).item()
-            correct += get_correct(outputs, target, device)
+            outputs, target = apply_model(model, batch)
+            loss = loss_func(outputs, target)
+            valid_loss += loss.item()
+            if calc_accuracy:
+                correct += get_correct(outputs, target, device)
         valid_loss = valid_loss / (step + 1)
         valid_losses.append(valid_loss)
-        accuracy = correct/valid_N
-        print_loss(epoch, valid_loss, outputs, target, is_train=False, accuracy=accuracy)
+        
+        # logging
+        if calc_accuracy:
+            accuracy = correct / 384 # valid_N
+            print_loss(epoch, valid_loss, is_train=False, accuracy=accuracy)
+            wandbRun.log({'valid_accuracy': accuracy})
+        else:
+            print_loss(epoch, valid_loss, is_train=False)
+
+        if scheduler is not None:
+            wandbRun.log({'learning_rate': scheduler.get_last_lr()[0]})
 
         wandbRun.log(
             {
                 'train_loss': train_loss, 
                 'valid_loss': valid_loss, 
-                'valid_accuracy': accuracy,
-                'learning_rate': scheduler.get_last_lr()[0]
             }
         )
 
@@ -90,6 +125,13 @@ def train_model(model, optimizer, loss_func, epochs, train_dataloader, valid_dat
             # Save the best model
             torch.save(best_model.state_dict(), model_save_path)
             print('Found and saved better weights for the model')
+
+    # end timer and log total train time
+    total_train_time_sec = time.perf_counter() - train_start_time
+    wandbRun.summary["total_train_time_sec"] = total_train_time_sec
+    
+    random.setstate(saved_random_state)
+    random.seed(None)
 
     return train_losses, valid_losses
 

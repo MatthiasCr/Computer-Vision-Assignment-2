@@ -2,45 +2,43 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+#
+# Models for Task 3-4
+#
 
-class Net(nn.Module):
-    """Single modal Conv Net for 4 Input channels and a binary output"""
-    def __init__(self):
+class LateEmbedder(nn.Module):
+    def __init__(self, embedding_size=100, embedder_type="maxpool"):
         super().__init__()
         kernel_size = 3
-        self.conv1 = nn.Conv2d(4, 50, kernel_size, padding=1)
-        self.conv2 = nn.Conv2d(50, 100, kernel_size, padding=1)
-        self.conv3 = nn.Conv2d(100, 200, kernel_size, padding=1)
-        self.pool = nn.MaxPool2d(2)
-        self.fc1 = nn.Linear(200 * 8 * 8, 1000)
-        self.fc2 = nn.Linear(1000, 100)
-        
-        # single output for binary class probability
-        self.fc3 = nn.Linear(100, 1)
 
+        if embedder_type == "maxpool":
+            stride = 1
+            self.pool = nn.MaxPool2d(2)
+        elif embedder_type == "strided":
+            stride = 2
+            # no extra pooling layer
+            self.pool = nn.Identity()
+
+        self.conv1 = nn.Conv2d(4, 25, kernel_size, padding=1, stride=stride)
+        self.conv2 = nn.Conv2d(25, 50, kernel_size, padding=1, stride=stride)
+        self.conv3 = nn.Conv2d(50, 100, kernel_size, padding=1, stride=stride)
+        self.fc = nn.Linear(100 * 8 * 8, embedding_size)
+        
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = self.pool(F.relu(self.conv3(x)))
         x = torch.flatten(x, 1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-    
+        return self.fc(x)
+
 
 class LateFusionNet(nn.Module):
-    def __init__(self):
+    def __init__(self, embedder_type="maxpool"):
         super().__init__()
-        # own Net per modality
-        self.rgb_net = Net()
-        self.xyz_net = Net()
-        self.fc1 = nn.Linear(2, 20)
-        self.fc2 = nn.Linear(20, 1)
-
-    def get_embedding_size(self):
-        # late fusion uses own embeddings for both modalities
-        return ""
+        self.rgb_net = LateEmbedder(100, embedder_type)
+        self.xyz_net = LateEmbedder(100, embedder_type)
+        self.fc1 = nn.Linear(200, 100)
+        self.fc2 = nn.Linear(100, 1)
 
     def forward(self, x_img, x_xyz):
         x_rgb = self.rgb_net(x_img)
@@ -51,49 +49,54 @@ class LateFusionNet(nn.Module):
         return x
 
 
-class Embedder(nn.Module):
-    def __init__(self, embedder_type="maxPool"):
+class IntermediateEmbedder(nn.Module):
+    def __init__(self, embedder_type="maxpool"):
         super().__init__()
         kernel_size = 3
-        self.conv1 = nn.Conv2d(4, 25, kernel_size, padding=1)
-        self.conv2 = nn.Conv2d(25, 50, kernel_size, padding=1)
-        self.conv3 = nn.Conv2d(50, 100, kernel_size, padding=1)
-        
-        match embedder_type:
-            case "maxPool":
-                self.pool = nn.MaxPool2d(2)
-            case "strided":
-                self.pool = nn.MaxPool2d(2)
+
+        if embedder_type == "maxpool":
+            stride = 1
+            self.pool = nn.MaxPool2d(2)
+        elif embedder_type == "strided":
+            stride = 2
+            # no extra pooling layer
+            self.pool = nn.Identity()
+
+        self.conv1 = nn.Conv2d(4, 50, kernel_size, padding=1, stride=stride)
+        self.conv2 = nn.Conv2d(50, 100, kernel_size, padding=1, stride=stride)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        return x
+        # no flatten
+        # returns shape (B, 100, 16, 16)
+        return x 
     
 
 class IntermediateFusionNet(nn.Module):
-    def __init__(self, fusion_type="cat", embedder_type="maxPool"):
+    def __init__(self, fusion_type="cat", embedder_type="maxpool"):
         super().__init__()
         self.fusion_type = fusion_type
 
-        self.rgb_embedder = Embedder(embedder_type)
-        self.xyz_embedder = Embedder(embedder_type)
+        self.rgb_embedder = IntermediateEmbedder(embedder_type)
+        self.xyz_embedder = IntermediateEmbedder(embedder_type)
 
         # concatenation doubles the output channels
-        if fusion_type == "cat":
-            fused_channels = 200
-        else:
-            fused_channels = 100
-        # embedding size is here the size after fusion and before linear layers
-        self.embedding_size = fused_channels * 8 * 8
+        fused_channels = 200 if fusion_type == "cat" else 100
+        
+        # shared layers
 
-        self.fc1 = nn.Linear(self.embedding_size, 1000)
-        self.fc2 = nn.Linear(1000, 100)
-        self.fc3 = nn.Linear(100, 1)
+        if embedder_type == "maxpool":
+            stride = 1
+            self.pool = nn.MaxPool2d(2)
+        elif embedder_type == "strided":
+            stride = 2
+            # no extra pooling layer
+            self.pool = nn.Identity()
 
-    def get_embedding_size(self):
-        return self.embedding_size
+        self.conv3 = nn.Conv2d(fused_channels, 100, kernel_size=3, padding=1, stride=stride)
+        self.fc1 = nn.Linear(100 * 8 * 8, 100)
+        self.fc2 = nn.Linear(100, 1)
 
     def forward(self, x_rgb, x_xyz):
         x_rgb = self.rgb_embedder(x_rgb)
@@ -106,9 +109,146 @@ class IntermediateFusionNet(nn.Module):
                 x = torch.add(x_rgb, x_xyz)
             case "had":
                 x = torch.mul(x_rgb, x_xyz)
-
+        x = self.pool(F.relu(self.conv3(x)))
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = self.fc2(x)
         return x
+
+
+#
+# Models for Task 5
+#
+
+class LidarClassifier(nn.Module):
+    def __init__(self):
+        super().__init__()
+        kernel_size = 3
+        n_classes = 1
+        self.embedding_size = 200
+        self.embedder = nn.Sequential(
+            nn.Conv2d(4, 50, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(50, 100, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(100, 200, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(200, 200, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Flatten(),
+            nn.Linear(200 * 4 * 4, self.embedding_size),
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(200, 100),
+            nn.ReLU(),
+            nn.Linear(100, n_classes)
+        )
+    def get_embedding_size(self):
+        return self.embedding_size
+
+    def get_embs(self, lidar_xyz):
+        return F.normalize(self.embedder(lidar_xyz))
+    
+    def forward(self, raw_data=None, data_embs=None):
+        assert (raw_data is not None or data_embs is not None), "No Lidar or embeddings given."
+        if raw_data is not None:
+            data_embs = self.get_embs(raw_data)
+        return self.classifier(data_embs)
+
+
+class CILPEmbedder(nn.Module):
+    def __init__(self, in_ch, emb_size=200):
+        super().__init__()
+        kernel_size = 3
+        stride = 1
+        padding = 1
+
+        # Convolution
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, 50, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(50, 100, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(100, 200, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Conv2d(200, 200, kernel_size, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            nn.Flatten()
+        )
+
+        # Embeddings
+        self.dense_emb = nn.Sequential(
+            nn.Linear(200 * 4 * 4, 100),
+            nn.ReLU(),
+            nn.Linear(100, emb_size)
+        )
+
+    def forward(self, x):
+        conv = self.conv(x)
+        emb = self.dense_emb(conv)
+        return F.normalize(emb)
+        # return emb
+
+
+class ContrastivePretraining(nn.Module):
+    def __init__(self, batch_size=32):
+        super().__init__()
+        self.batch_size = batch_size
+        self.embedding_size = 200
+
+        self.img_embedder = CILPEmbedder(4, self.embedding_size)
+        self.lidar_embedder = CILPEmbedder(4, self.embedding_size)
+        self.cos = nn.CosineSimilarity()
+
+    def get_embedding_size(self):
+        return self.embedding_size
+
+    def forward(self, rgb_imgs, lidar_xyz):
+        img_emb = self.img_embedder(rgb_imgs)
+        lidar_emb = self.lidar_embedder(lidar_xyz)
+
+        repeated_img_emb = img_emb.repeat_interleave(len(img_emb), dim=0)
+        repeated_lidar_emb = lidar_emb.repeat(len(lidar_emb), 1)
+
+        similarity = self.cos(repeated_img_emb, repeated_lidar_emb)
+        similarity = torch.unflatten(similarity, 0, (self.batch_size, self.batch_size))
+        similarity = (similarity + 1) / 2
+
+        logits_per_img = similarity
+        logits_per_lidar = similarity.T
+        return logits_per_img, logits_per_lidar
+
+
+class Projector(nn.Module):
+    def __init__(self, img_emb_size, lidar_emb_size):
+        super().__init__()
+        self.layers = nn.Sequential(
+            nn.Linear(img_emb_size, 1000),
+            nn.ReLU(),
+            nn.Linear(1000, 500),
+            nn.ReLU(),
+            nn.Linear(500, lidar_emb_size)
+        )
+    def forward(self, img_emb):
+        return F.normalize(self.layers(img_emb))
+
+
+class RGB2LiDARClassifier(nn.Module):
+    def __init__(self, projector, cilp_model, classifier):
+        super().__init__()
+        self.projector = projector
+        self.img_embedder = cilp_model.img_embedder
+        self.shape_classifier = classifier
+    
+    def forward(self, imgs):
+        img_encodings = self.img_embedder(imgs)
+        proj_lidar_embs = self.projector(img_encodings)
+        return self.shape_classifier(data_embs=proj_lidar_embs)

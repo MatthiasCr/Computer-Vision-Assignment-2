@@ -2,7 +2,6 @@ import torch
 from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
-import fiftyone as fo
 
 
 def get_torch_xyza(lidar_depth, azimuth, zenith):
@@ -63,7 +62,7 @@ class MultimodalDataset(Dataset):
         lidar_depth = self.lidar_data[idx]
         label = self.labels[idx]
 
-        if label == 0:
+        if label.item() == 0:
             az = self.azimuth_cubes
             ze = self.zenith_cubes
         else:

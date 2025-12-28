@@ -17,6 +17,7 @@ def set_seeds(seed=51):
 
     # Python random module
     random.seed(seed)
+    saved_random_state = random.getstate()
 
     # NumPy
     np.random.seed(seed)
@@ -48,3 +49,5 @@ def set_seeds(seed=51):
         print("Warning: Some operations may not be deterministic")
 
     print(f"All random seeds set to {seed} for reproducibility")
+
+    return saved_random_state
