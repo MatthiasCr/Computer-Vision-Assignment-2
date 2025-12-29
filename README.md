@@ -1,5 +1,7 @@
 # CILP Assessment: Multimodal Learning
 
+This is an Assignment in the Seminar "Applied Hands-On Computer Vision" at HPI. It is about multimodal models and different fusion strategies and contrastive learning.
+
 ## Data Setup
 
 The dataset consists of cubes and spheres each having an rgb image and matching data from a LiDAR sensor. From the original dataset ([kaggle](https://www.kaggle.com/datasets/andandand/cubes-and-spheres-lidar-and-rgb)) consisting of 9999 cubes and 9999 spheres I created a subset of 1000 cubes and 1000 spheres and uploaded it as a grouped fiftyone dataset on huggingface. All notebooks will start by loading this huggingface dataset. In the first notebook I explain how I created this subset and how to use it.
@@ -73,3 +75,4 @@ Fusion models with strided convolutions as downsampling. In brackets is the diff
 CILP similarity matrix:
 
 ![](results/cilp-similarity-matrix.png)
+
