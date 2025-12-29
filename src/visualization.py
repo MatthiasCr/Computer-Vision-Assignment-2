@@ -4,11 +4,6 @@ import torch
 import wandb
 import io
 
-
-def format_positions(positions):
-    return ['{0: .3f}'.format(x) for x in positions]
-
-
 def print_loss(epoch, loss, is_train=True, accuracy=None):
     loss_type = "train loss:" if is_train else "valid loss:"
 
