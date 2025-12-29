@@ -88,14 +88,21 @@ def plot_similarity_matrix(model, apply_model, dataloader, device, run):
             ax.set_xlabel("LiDAR samples")
             ax.set_ylabel("Image samples")
             ax.set_title("CILP Image–LiDAR Similarity Matrix")
-            plt.tight_layout()          
+            plt.tight_layout()
 
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png")
-    buf.seek(0)
+        # Draw the canvas
+        fig.canvas.draw()
 
-    run.log({
-        "similarity_matrix": wandb.Image(buf, caption="CILP Image–LiDAR Similarity Matrix")
-    })
+        # Convert to numpy array
+        img_array = np.array(fig.canvas.renderer.buffer_rgba())[:, :, :3]  # drop alpha
 
-    plt.close(fig)
+        # Log to wandb
+        run.log({
+            "similarity_matrix": wandb.Image(img_array, caption="CILP Image-LiDAR Similarity Matrix")
+        })
+
+        plt.close(fig)
+
+
+
+

@@ -121,11 +121,13 @@ class IntermediateFusionNet(nn.Module):
 #
 
 class LidarClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, emb_size: int = 200, normalize_embs: bool = True):
         super().__init__()
         kernel_size = 3
         n_classes = 1
-        self.embedding_size = 200*4*4
+        self.embedding_size = emb_size
+        self.normalize_embs = normalize_embs
+
         self.embedder = nn.Sequential(
             nn.Conv2d(4, 50, kernel_size, padding=1),
             nn.ReLU(),
@@ -140,19 +142,24 @@ class LidarClassifier(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Flatten(),
-            #nn.Linear(200 * 4 * 4, self.embedding_size),
+            nn.Linear(200 * 4 * 4, 100),
+            nn.ReLU(),
+            nn.Linear(100, self.embedding_size)
         )
         self.classifier = nn.Sequential(
-            nn.Linear(200 * 4 * 4, 100),
+            nn.Linear(self.embedding_size, 100),
             nn.ReLU(),
             nn.Linear(100, n_classes)
         )
+
     def get_embedding_size(self):
         return self.embedding_size
 
     def get_embs(self, lidar_xyz):
-        return self.embedder(lidar_xyz)
-        # return F.normalize(self.embedder(lidar_xyz))
+        embs = self.embedder(lidar_xyz)
+        if self.normalize_embs:
+            embs = F.normalize(embs, dim=1)
+        return embs
     
     def forward(self, raw_data=None, data_embs=None):
         assert (raw_data is not None or data_embs is not None), "No Lidar or embeddings given."
@@ -195,8 +202,7 @@ class CILPEmbedder(nn.Module):
     def forward(self, x):
         conv = self.conv(x)
         emb = self.dense_emb(conv)
-        return F.normalize(emb)
-        # return emb
+        return F.normalize(emb, dim=1)
 
 
 class ContrastivePretraining(nn.Module):
@@ -233,20 +239,20 @@ class ContrastivePretraining(nn.Module):
         return logits_per_img, logits_per_lidar
 
 
-
 class Projector(nn.Module):
-    def __init__(self, img_emb_size, lidar_emb_size):
+    def __init__(self, img_emb_size, lidar_emb_size, normalize_output: bool = True):
         super().__init__()
+        self.normalize_output = normalize_output
         self.layers = nn.Sequential(
-            nn.Linear(img_emb_size, 1000),
+            nn.Linear(img_emb_size, 100),
             nn.ReLU(),
-            nn.Linear(1000, 500),
-            nn.ReLU(),
-            nn.Linear(500, lidar_emb_size)
+            nn.Linear(100, lidar_emb_size)
         )
     def forward(self, img_emb):
-        return self.layers(img_emb)
-        #return F.normalize(self.layers(img_emb))
+        proj = self.layers(img_emb)
+        if self.normalize_output:
+            proj = F.normalize(proj, dim=1)
+        return proj
 
 
 class RGB2LiDARClassifier(nn.Module):
