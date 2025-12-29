@@ -44,7 +44,7 @@ This clones the repo and sets it as working directory. Now local imports from th
 
 - Open the file /content/Computer-Vision-Assignment-2/src/training.py and set the constants `WANDB_TEAM_NAME` to your W&B team name and `WANDB_PROJECT_NAME` to a name for a (new) project
 
-- Execute the cell with `!wandb login` and insert your W&B token
+- Execute the cell that contains `!wandb login` and insert your W&B token
 
 ## Summary of Results
 
@@ -75,6 +75,7 @@ Fusion models with strided convolutions as downsampling. In brackets is the diff
 CILP similarity matrix:
 
 ![](results/cilp-similarity-matrix.png)
+
 
 
 
