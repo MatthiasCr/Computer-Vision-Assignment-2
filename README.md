@@ -43,3 +43,33 @@ This clones the repo and sets it as working directory. Now local imports from th
 - Open the file /content/Computer-Vision-Assignment-2/src/training.py and set WANDB_TEAM_NAME to your W&B team name and WANDB_PROJECT_NAME to a name for a (new) project
 
 - Execute the cell with `!wandb login` and insert your W&B token
+
+## Summary of Results
+
+### Comparison of fusion Architectures:**
+
+Fusion models with `MaxPool2D` downsampling:
+
+| Metric | Late Fusion | Intermediate (Cat) | Intermediate (Add) | Intermediate (Had) |
+| --- | --- | --- | --- | --- |
+| Valid Loss | 0.039 | 0.032 | 0.119 | 0.070 |
+| Valid Accuracy | 0.987 | 0.992 | 0.971 | 0.984 |
+| Parameter Count | 1,415,051 | 914,201 | 824,201 | 824,201 |
+| Train Time (s) | 22.17 | 25.71 | 24.38 | 24.76 |
+| GPU Memory (MB) | 601 | 773 | 775 | 777 |
+
+Fusion models with strided convolutions as downsampling. In brackets is the difference to the corresponding run with MaxPool:
+
+| Metric | Strided Late | Strided Concat | Strided Addition | Strided Hadamard |
+| --- | --- | --- | --- | --- |
+| Valid Loss | 0.254 (+0.215) | 0.357 (+0.325) | 0.395 (+0.276) | 0.179 (+0.109) |
+| Valid Accuracy | 0.929 (-0.058) | 0.841 (-0.151) | 0.820 (-0.151) | 0.971 (-0.013) |
+| Parameter Count | 1,415,051 (=) | 914,201 (=) | 824,201 (=) | 824,201 (=) |
+| Train Time (s) | 16.15 (-6.02) | 15.25 (-9.92) | 14.97 (-9.41) | 14.82 (-9.94) |
+| GPU Memory (MB) | 779 (+178) | 779 (+6) | 779 (+4) | 779 (+2) |
+
+### CILP model
+
+CILP similarity matrix:
+
+![](results/cilp-similarity-matrix.png)
