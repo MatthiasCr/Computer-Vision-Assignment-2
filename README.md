@@ -1,6 +1,6 @@
 # CILP Assessment: Multimodal Learning
 
-This is an Assignment in the Seminar "Applied Hands-On Computer Vision" at HPI. It is about multimodal models and different fusion strategies and contrastive learning.
+This is an Assignment in the Seminar "Applied Hands-On Computer Vision" at HPI. It is about multimodal models, different fusion strategies, and contrastive learning.
 
 ## Data Setup
 
@@ -75,4 +75,5 @@ Fusion models with strided convolutions as downsampling. In brackets is the diff
 CILP similarity matrix:
 
 ![](results/cilp-similarity-matrix.png)
+
 
