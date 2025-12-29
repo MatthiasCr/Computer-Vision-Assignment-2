@@ -48,7 +48,7 @@ This clones the repo and sets it as working directory. Now local imports from th
 
 ## Summary of Results
 
-### Comparison of fusion Architectures:**
+### Comparison of Fusion Architectures:
 
 Fusion models with `MaxPool2D` downsampling:
 
@@ -70,10 +70,11 @@ Fusion models with strided convolutions as downsampling. In brackets is the diff
 | Train Time (s) | 16.15 (-6.02) | 15.25 (-9.92) | 14.97 (-9.41) | 14.82 (-9.94) |
 | GPU Memory (MB) | 779 (+178) | 779 (+6) | 779 (+4) | 779 (+2) |
 
-### CILP model
+### CILP Model
 
 CILP similarity matrix:
 
 ![](results/cilp-similarity-matrix.png)
+
 
 
