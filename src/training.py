@@ -9,6 +9,7 @@ WANDB_TEAM_NAME = "matthiascr-hpi-team"
 WANDB_PROJECT_NAME = "cilp-extended-assessment"
 
 def initWandbRun(fusion_type, epochs, batch_size, parameters, optimizer, lr_scheduler, lr_start, lr_end):
+    """starts and returns a W&B run"""
     run = wandb.init(
     entity = WANDB_TEAM_NAME,
     project = WANDB_PROJECT_NAME,

@@ -5,6 +5,7 @@ import numpy as np
 
 
 def get_torch_xyza(lidar_depth, azimuth, zenith):
+    """converts lidar depth data into xyza points with a being a mask"""
     x = lidar_depth * torch.sin(-azimuth[:, None]) * torch.cos(-zenith[None, :])
     y = lidar_depth * torch.cos(-azimuth[:, None]) * torch.cos(-zenith[None, :])
     z = lidar_depth * torch.sin(-zenith[None, :])

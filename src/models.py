@@ -7,6 +7,7 @@ import torch.nn.functional as F
 #
 
 class LateEmbedder(nn.Module):
+    """Embedder used in LateFusionNet"""
     def __init__(self, embedding_size=100, embedder_type="maxpool"):
         super().__init__()
         kernel_size = 3
@@ -33,6 +34,7 @@ class LateEmbedder(nn.Module):
 
 
 class LateFusionNet(nn.Module):
+    """Multimodal model with own embedders for both modalities"""
     def __init__(self, embedder_type="maxpool"):
         super().__init__()
         self.rgb_net = LateEmbedder(100, embedder_type)
@@ -50,6 +52,7 @@ class LateFusionNet(nn.Module):
 
 
 class IntermediateEmbedder(nn.Module):
+    """Embedder for IntermediateFusionNet"""
     def __init__(self, embedder_type="maxpool"):
         super().__init__()
         kernel_size = 3
@@ -74,6 +77,7 @@ class IntermediateEmbedder(nn.Module):
     
 
 class IntermediateFusionNet(nn.Module):
+    """Multimodal model that combines modalities earlier"""
     def __init__(self, fusion_type="cat", embedder_type="maxpool"):
         super().__init__()
         self.fusion_type = fusion_type
@@ -121,6 +125,7 @@ class IntermediateFusionNet(nn.Module):
 #
 
 class LidarClassifier(nn.Module):
+    """Single modal model to classify LiDAR only data"""
     def __init__(self, emb_size: int = 200, normalize_embs: bool = True):
         super().__init__()
         kernel_size = 3
@@ -169,6 +174,7 @@ class LidarClassifier(nn.Module):
 
 
 class CILPEmbedder(nn.Module):
+    """Embedder for ContrastivePretraining model"""
     def __init__(self, in_ch, emb_size=200):
         super().__init__()
         kernel_size = 3
@@ -206,6 +212,7 @@ class CILPEmbedder(nn.Module):
 
 
 class ContrastivePretraining(nn.Module):
+    """Contrastive learning model for two modalities"""
     def __init__(self, batch_size=32):
         super().__init__()
         self.batch_size = batch_size
@@ -243,6 +250,7 @@ class ContrastivePretraining(nn.Module):
 
 
 class Projector(nn.Module):
+    """linear model to project between embedding spaces"""
     def __init__(self, img_emb_size, lidar_emb_size, normalize_output: bool = True):
         super().__init__()
         self.normalize_output = normalize_output
@@ -259,6 +267,10 @@ class Projector(nn.Module):
 
 
 class RGB2LiDARClassifier(nn.Module):
+    """
+    Classifier that takes images, embedds them using CILP, 
+    predicts corresponding LiDAR embeddings and classifies them
+    """
     def __init__(self, projector, cilp_model, classifier):
         super().__init__()
         self.projector = projector

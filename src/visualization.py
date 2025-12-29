@@ -5,6 +5,7 @@ import wandb
 import io
 
 def print_loss(epoch, loss, is_train=True, accuracy=None):
+    """utility function to print losses during training"""
     loss_type = "train loss:" if is_train else "valid loss:"
 
     if accuracy is not None:
@@ -14,6 +15,10 @@ def print_loss(epoch, loss, is_train=True, accuracy=None):
 
 
 def plot_loss(epochs, lossesDict):
+    """
+    utility function to plot (multiple) loss curves. 
+    Takes dictionary with keys being labels and values being the data
+    """
     plot_x = range(epochs)
 
     plt.xlabel("Epoch")
