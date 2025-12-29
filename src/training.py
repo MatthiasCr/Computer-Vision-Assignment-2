@@ -5,12 +5,14 @@ import random
 from .visualization import print_loss, lidar_to_img
 from .utils import set_seeds
 
+WANDB_TEAM_NAME = "matthiascr-hpi-team"
+WANDB_PROJECT_NAME = "cilp-extended-assessment"
 
 def initWandbRun(fusion_type, epochs, batch_size, parameters, optimizer, lr_scheduler, lr_start, lr_end):
     run = wandb.init(
-    entity="matthiascr-hpi-team",
-    project="cilp-extended-assessment",
-    config={
+    entity = WANDB_TEAM_NAME,
+    project = WANDB_PROJECT_NAME,
+    config = {
         "fusion type": fusion_type,
         "epochs": epochs,
         "batch_size": batch_size,
@@ -104,7 +106,9 @@ def train_model(
         log_dict = {}
 
         if calc_accuracy:
-            accuracy = correct / 384 # valid_N
+            # since the dataloader have drop_last = True we only predict on 384 samples out of the 400
+            # For now just hardcoded
+            accuracy = correct / 384 # instead of valid_N
             print_loss(epoch, valid_loss, is_train=False, accuracy=accuracy)
             log_dict['valid_accuracy'] = accuracy
         else:

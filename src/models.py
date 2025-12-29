@@ -215,6 +215,7 @@ class ContrastivePretraining(nn.Module):
         self.lidar_embedder = CILPEmbedder(4, self.embedding_size)
         self.cos = nn.CosineSimilarity()
 
+        # softmax temperature parameter 
         self.logit_scale = nn.Parameter(torch.tensor(1 / 0.07))
 
     def get_embedding_size(self):
@@ -226,12 +227,14 @@ class ContrastivePretraining(nn.Module):
         img_emb = F.normalize(img_emb, dim=1)
         lidar_emb = F.normalize(lidar_emb, dim=1)
 
+        # construction of similarity matrix
         repeated_img_emb = img_emb.repeat_interleave(len(img_emb), dim=0)
         repeated_lidar_emb = lidar_emb.repeat(len(lidar_emb), 1)
 
         similarity = self.cos(repeated_img_emb, repeated_lidar_emb)
         similarity = torch.unflatten(similarity, 0, (self.batch_size, self.batch_size))
         
+        # temperature scaling to make gradients stronger
         logits_per_img = self.logit_scale.exp() * similarity
 
         logits_per_img = similarity
