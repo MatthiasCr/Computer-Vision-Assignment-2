@@ -50,7 +50,7 @@ This clones the repo and sets it as working directory. Now local imports from th
 
 ### Comparison of Fusion Architectures:
 
-Fusion models with `MaxPool2D` downsampling:
+Fusion models with `MaxPool2D` downsampling (details in notebook `02_fusion_comparison`):
 
 | Metric | Late Fusion | Intermediate (Cat) | Intermediate (Add) | Intermediate (Had) |
 | --- | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ Fusion models with `MaxPool2D` downsampling:
 | Train Time (s) | 22.17 | 25.71 | 24.38 | 24.76 |
 | GPU Memory (MB) | 601 | 773 | 775 | 777 |
 
-Fusion models with strided convolutions as downsampling. In brackets is the difference to the corresponding run with MaxPool:
+Fusion models with strided convolutions as downsampling. In brackets is the difference to the corresponding run with MaxPool (details in notebook `03_strided_conv_ablation`):
 
 | Metric | Strided Late | Strided Concat | Strided Addition | Strided Hadamard |
 | --- | --- | --- | --- | --- |
@@ -75,6 +75,7 @@ Fusion models with strided convolutions as downsampling. In brackets is the diff
 CILP similarity matrix:
 
 ![](results/cilp-similarity-matrix.png)
+
 
 
 
