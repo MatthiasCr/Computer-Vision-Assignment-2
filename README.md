@@ -36,10 +36,11 @@ if "google.colab" in sys.modules:
     !pip install -r requirements.txt
 ```
 
-This clones the repo and sets it as working directory. Now local imports from the src module will work. It also installs all necessary python packages.
+This clones the repo and sets it as working directory. Now local imports from the `src` module will work. It also installs all necessary python packages.
 
 **W&B Setup** (only for notebooks 2-4)
 
-- Open the file /content/Computer-Vision-Assignment-2/src/training.py and set WANDB_TEAM_NAME to your W&B team name and WANDB_PROJECT_NAME to a name for a (new) project
+- Open the file /content/Computer-Vision-Assignment-2/src/training.py and set the constants `WANDB_TEAM_NAME` to your W&B team name and `WANDB_PROJECT_NAME` to a name for a (new) project
+
 
 - Execute the cell with `!wandb login` and insert your W&B token
