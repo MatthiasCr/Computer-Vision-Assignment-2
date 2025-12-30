@@ -38,7 +38,7 @@ if "google.colab" in sys.modules:
     !pip install -r requirements.txt
 ```
 
-This clones the repo and sets it as working directory. Now local imports from the `src` module and all relative paths used insidee the notebooks will work. It also installs all necessary python packages.
+This clones the repo and sets it as working directory. Now local imports from the `src` module and all relative paths used inside the notebooks will work. It also installs all necessary python packages.
 
 **W&B Setup** (only for notebooks 2-4)
 
@@ -75,6 +75,7 @@ Fusion models with strided convolutions as downsampling. In brackets is the diff
 CILP similarity matrix:
 
 ![](results/cilp-similarity-matrix.png)
+
 
 
 
