@@ -34,8 +34,9 @@ if "google.colab" in sys.modules:
     print("Running in Google Colab. Setting up repo")
 
     !git clone https://github.com/MatthiasCr/Computer-Vision-Assignment-2.git
-    %cd Computer-Vision-Assignment-2/notebooks
+    %cd Computer-Vision-Assignment-2
     !pip install -r requirements.txt
+    %cd notebooks
 ```
 
 This clones the repo and sets it as working directory. Now local imports from the `src` module and all relative paths used inside the notebooks will work. It also installs all necessary python packages.
